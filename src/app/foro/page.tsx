@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -162,7 +163,22 @@ export default function ForoPage() {
                             <TabsTrigger value="recientes">Más recientes</TabsTrigger>
                             <TabsTrigger value="populares">Más populares</TabsTrigger>
                             <TabsTrigger value="sin-respuesta">Sin respuesta</TabsTrigger>
-                            ))
+                        </TabsList>
+
+                        <TabsContent value="recientes" className="space-y-4">
+                            {filteredPosts.length === 0 ? (
+                                <Card className="text-center py-12">
+                                    <CardContent>
+                                        <div className="text-4xl mb-4">🔍</div>
+                                        <p className="text-muted-foreground">
+                                            No se encontraron publicaciones
+                                        </p>
+                                    </CardContent>
+                                </Card>
+                            ) : (
+                                filteredPosts.map((post) => (
+                                    <PostCard key={post.id} post={post} />
+                                ))
                             )}
                         </TabsContent>
 
@@ -221,9 +237,11 @@ function PostCard({ post }: { post: typeof samplePosts[0] }) {
                             <span className="text-xs text-muted-foreground">{timeAgo}</span>
                         </div>
 
-                        <h3 className="font-semibold text-base mb-1 line-clamp-1 hover:text-primary transition-colors">
-                            {post.title}
-                        </h3>
+                        <Link href={`/foro/${post.id}`} className="hover:underline">
+                            <h3 className="font-semibold text-base mb-1 line-clamp-1 hover:text-primary transition-colors">
+                                {post.title}
+                            </h3>
+                        </Link>
 
                         <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
                             {post.content}
