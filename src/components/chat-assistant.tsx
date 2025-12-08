@@ -89,162 +89,146 @@ export function ChatAssistant() {
     }, [messages, isTyping]);
 
     const getResponse = (query: string): string => {
-        const lowerQuery = query.toLowerCase();
-
-        // Check for keyword matches
-        for (const [key, response] of Object.entries(knowledgeBase)) {
-            if (lowerQuery.includes(key)) {
-                return response;
-            }
-        }
-
-        return "🤔 Mmm... No estoy seguro de eso, pero suena importante. Te recomiendo:\n\n• Consultar la sección de Recursos Legales.\n• Preguntar en nuestro Foro.\n• Si es una emergencia médica, ¡llama al veterinario!";
-    };
-
-    const sendMessage = async (content: string) => {
-        if (!content.trim()) return;
-
-        const userMessage: Message = {
-            id: Date.now().toString(),
+        id: Date.now().toString(),
             role: "user",
-            content,
+                content,
+                timestamp: new Date(),
+        };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
+    setIsTyping(true);
+
+    // Simulated AI delay
+    setTimeout(() => {
+        const responseContent = getResponse(content);
+
+        const assistantMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            role: "assistant",
+            content: responseContent,
             timestamp: new Date(),
         };
 
-        setMessages((prev) => [...prev, userMessage]);
-        setInput("");
-        setIsTyping(true);
+        setMessages((prev) => [...prev, assistantMessage]);
+        setIsTyping(false);
+    }, 1000); // Faster response for better UX
+};
 
-        // Simulated AI delay
-        setTimeout(() => {
-            const responseContent = getResponse(content);
+return (
+    <>
+        <button
+            onClick={() => setIsOpen(true)}
+            className={`fixed bottom-6 right-6 z-50 w-16 h-16 bg-primary text-primary-foreground rounded-full shadow-lg flex items-center justify-center text-3xl hover:scale-110 transition-transform ${isOpen ? "hidden" : ""}`}
+            aria-label="Abrir asistente virtual"
+        >
+            🐕
+        </button>
 
-            const assistantMessage: Message = {
-                id: (Date.now() + 1).toString(),
-                role: "assistant",
-                content: responseContent,
-                timestamp: new Date(),
-            };
+        {isOpen && (
+            <>
+                {/* Backdrop for mobile focus */}
+                <div
+                    className="fixed inset-0 bg-black/50 z-40 md:hidden"
+                    onClick={() => setIsOpen(false)}
+                />
 
-            setMessages((prev) => [...prev, assistantMessage]);
-            setIsTyping(false);
-        }, 1000); // Faster response for better UX
-    };
-
-    return (
-        <>
-            <button
-                onClick={() => setIsOpen(true)}
-                className={`fixed bottom-6 right-6 z-50 w-16 h-16 bg-primary text-primary-foreground rounded-full shadow-lg flex items-center justify-center text-3xl hover:scale-110 transition-transform ${isOpen ? "hidden" : ""}`}
-                aria-label="Abrir asistente virtual"
-            >
-                🐕
-            </button>
-
-            {isOpen && (
-                <>
-                    {/* Backdrop for mobile focus */}
-                    <div
-                        className="fixed inset-0 bg-black/50 z-40 md:hidden"
-                        onClick={() => setIsOpen(false)}
-                    />
-
-                    <div className="fixed bottom-0 right-0 md:bottom-6 md:right-6 z-50 w-full md:w-[380px] h-[80vh] md:h-[600px] bg-background border rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-300">
-                        {/* Header */}
-                        <div className="bg-primary text-primary-foreground p-4 flex items-center justify-between shrink-0">
-                            <div className="flex items-center gap-3">
-                                <Avatar className="h-10 w-10 bg-primary-foreground/20">
-                                    <AvatarFallback className="text-xl">🐕</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                    <h3 className="font-semibold">Toby</h3>
-                                    <p className="text-xs text-primary-foreground/80">Tu asistente experto</p>
-                                </div>
+                <div className="fixed bottom-0 right-0 md:bottom-6 md:right-6 z-50 w-full md:w-[380px] h-[80vh] md:h-[600px] bg-background border rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-300">
+                    {/* Header */}
+                    <div className="bg-primary text-primary-foreground p-4 flex items-center justify-between shrink-0">
+                        <div className="flex items-center gap-3">
+                            <Avatar className="h-10 w-10 bg-primary-foreground/20">
+                                <AvatarFallback className="text-xl">🐕</AvatarFallback>
+                            </Avatar>
+                            <div>
+                                <h3 className="font-semibold">Toby</h3>
+                                <p className="text-xs text-primary-foreground/80">Tu asistente experto</p>
                             </div>
-                            <button
-                                onClick={() => setIsOpen(false)}
-                                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary-foreground/20 transition-colors"
-                                aria-label="Cerrar chat"
-                            >
-                                ✕
-                            </button>
                         </div>
-
-                        {/* Messages Area */}
-                        <ScrollArea className="flex-1 p-4 bg-slate-50 dark:bg-slate-900/50" ref={scrollRef}>
-                            <div className="space-y-4">
-                                {messages.map((message) => (
-                                    <div
-                                        key={message.id}
-                                        className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-                                    >
-                                        <div
-                                            className={`max-w-[85%] rounded-2xl px-4 py-2 shadow-sm ${message.role === "user"
-                                                ? "bg-primary text-primary-foreground rounded-br-md"
-                                                : "bg-white dark:bg-slate-800 border rounded-bl-md"
-                                                }`}
-                                        >
-                                            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                                        </div>
-                                    </div>
-                                ))}
-
-                                {isTyping && (
-                                    <div className="flex justify-start">
-                                        <div className="bg-white dark:bg-slate-800 border rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
-                                            <div className="flex gap-1">
-                                                <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" />
-                                                <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce [animation-delay:0.1s]" />
-                                                <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce [animation-delay:0.2s]" />
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </ScrollArea>
-
-                        {/* Quick Questions Chips */}
-                        {messages.length === 1 && (
-                            <div className="px-4 py-2 bg-slate-50 dark:bg-slate-900/50 shrink-0 overflow-x-auto">
-                                <div className="flex gap-2">
-                                    {quickQuestions.map((q) => (
-                                        <button
-                                            key={q}
-                                            onClick={() => sendMessage(q)}
-                                            className="text-xs bg-white dark:bg-slate-800 border hover:bg-slate-100 whitespace-nowrap px-3 py-1.5 rounded-full transition-colors"
-                                        >
-                                            {q}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Input Area */}
-                        <div className="p-4 border-t bg-background shrink-0">
-                            <form
-                                onSubmit={(e) => {
-                                    e.preventDefault();
-                                    sendMessage(input);
-                                }}
-                                className="flex gap-2"
-                            >
-                                <Input
-                                    value={input}
-                                    onChange={(e) => setInput(e.target.value)}
-                                    placeholder="Pregunta sobre leyes, salud..."
-                                    disabled={isTyping}
-                                    className="flex-1"
-                                    autoFocus
-                                />
-                                <Button type="submit" size="icon" disabled={isTyping || !input.trim()}>
-                                    ➤
-                                </Button>
-                            </form>
-                        </div>
+                        <button
+                            onClick={() => setIsOpen(false)}
+                            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary-foreground/20 transition-colors"
+                            aria-label="Cerrar chat"
+                        >
+                            ✕
+                        </button>
                     </div>
-                </>
-            )}
-        </>
-    );
+
+                    {/* Messages Area */}
+                    <ScrollArea className="flex-1 p-4 bg-slate-50 dark:bg-slate-900/50" ref={scrollRef}>
+                        <div className="space-y-4">
+                            {messages.map((message) => (
+                                <div
+                                    key={message.id}
+                                    className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                                >
+                                    <div
+                                        className={`max-w-[85%] rounded-2xl px-4 py-2 shadow-sm ${message.role === "user"
+                                            ? "bg-primary text-primary-foreground rounded-br-md"
+                                            : "bg-white dark:bg-slate-800 border rounded-bl-md"
+                                            }`}
+                                    >
+                                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                                    </div>
+                                </div>
+                            ))}
+
+                            {isTyping && (
+                                <div className="flex justify-start">
+                                    <div className="bg-white dark:bg-slate-800 border rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
+                                        <div className="flex gap-1">
+                                            <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" />
+                                            <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce [animation-delay:0.1s]" />
+                                            <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce [animation-delay:0.2s]" />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </ScrollArea>
+
+                    {/* Quick Questions Chips */}
+                    {messages.length === 1 && (
+                        <div className="px-4 py-2 bg-slate-50 dark:bg-slate-900/50 shrink-0 overflow-x-auto">
+                            <div className="flex gap-2">
+                                {quickQuestions.map((q) => (
+                                    <button
+                                        key={q}
+                                        onClick={() => sendMessage(q)}
+                                        className="text-xs bg-white dark:bg-slate-800 border hover:bg-slate-100 whitespace-nowrap px-3 py-1.5 rounded-full transition-colors"
+                                    >
+                                        {q}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Input Area */}
+                    <div className="p-4 border-t bg-background shrink-0">
+                        <form
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                sendMessage(input);
+                            }}
+                            className="flex gap-2"
+                        >
+                            <Input
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                placeholder="Pregunta sobre leyes, salud..."
+                                disabled={isTyping}
+                                className="flex-1"
+                                autoFocus
+                            />
+                            <Button type="submit" size="icon" disabled={isTyping || !input.trim()}>
+                                ➤
+                            </Button>
+                        </form>
+                    </div>
+                </div>
+            </>
+        )}
+    </>
+);
 }

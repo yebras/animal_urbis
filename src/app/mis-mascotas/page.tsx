@@ -124,7 +124,7 @@ export default function MisMascotasPage() {
                         </Avatar>
                         <div className="flex-1">
                             <h2 className="text-xl font-semibold">Usuario Demo</h2>
-                            <p className="text-muted-foreground">demo@mascotazen.es</p>
+                            <p className="text-muted-foreground">demo@animalurbis.es</p>
                         </div>
                         <div className="text-center">
                             <div className="text-3xl font-bold text-primary">{pets.length}</div>

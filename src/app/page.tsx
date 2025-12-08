@@ -91,7 +91,7 @@ export default function HomePage() {
               Todo para tu mascota en un solo lugar
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              MascotaZEN te ofrece todas las herramientas que necesitas para
+              Animal Urbis te ofrece todas las herramientas que necesitas para
               cuidar y gestionar la información de tus mascotas.
             </p>
           </div>
