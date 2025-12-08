@@ -10,6 +10,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 // Sample pet data - In production, this would come from Supabase
 const samplePets = [
@@ -186,10 +188,20 @@ function PetCard({
     return (
         <Card className="overflow-hidden hover:shadow-lg transition-shadow">
             {/* Pet Photo */}
-            <div className="aspect-square bg-gradient-to-br from-pet-orange-light to-pet-beige flex items-center justify-center">
-                <span className="text-8xl">
-                    {pet.type === "dog" ? "🐕" : "🐈"}
-                </span>
+            <div className={`aspect-square flex items-center justify-center relative bg-muted`}>
+                {pet.photoUrl ? (
+                    <img
+                        src={pet.photoUrl}
+                        alt={pet.name}
+                        className="w-full h-full object-cover"
+                    />
+                ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-pet-orange-light to-pet-beige flex items-center justify-center">
+                        <span className="text-8xl">
+                            {pet.type === "dog" ? "🐕" : "🐈"}
+                        </span>
+                    </div>
+                )}
             </div>
 
             <CardHeader className="pb-2">
@@ -245,6 +257,8 @@ function PetForm({
     onSave: (pet: typeof samplePets[0]) => void;
     onCancel: () => void;
 }) {
+    const supabase = createClient();
+    const [uploading, setUploading] = useState(false);
     const [formData, setFormData] = useState({
         id: pet?.id || "",
         name: pet?.name || "",
@@ -255,6 +269,39 @@ function PetForm({
         photoUrl: pet?.photoUrl || "",
         notes: pet?.notes || "",
     });
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        try {
+            setUploading(true);
+            if (!e.target.files || e.target.files.length === 0) {
+                throw new Error("Selecciona una imagen");
+            }
+
+            const file = e.target.files[0];
+            const fileExt = file.name.split(".").pop();
+            const fileName = `${Math.random()}.${fileExt}`;
+            const filePath = `${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from("pet-photos")
+                .upload(filePath, file);
+
+            if (uploadError) {
+                throw uploadError;
+            }
+
+            const { data } = supabase.storage
+                .from("pet-photos")
+                .getPublicUrl(filePath);
+
+            setFormData({ ...formData, photoUrl: data.publicUrl });
+            toast.success("Foto subida correctamente");
+        } catch (error: any) {
+            toast.error("Error subiendo imagen: " + error.message);
+        } finally {
+            setUploading(false);
+        }
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -269,6 +316,44 @@ function PetForm({
                     <TabsTrigger value="cat">🐈 Gato</TabsTrigger>
                 </TabsList>
             </Tabs>
+
+            {/* Photo Upload */}
+            <div className="flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-lg bg-muted/20">
+                {formData.photoUrl ? (
+                    <div className="relative w-32 h-32 mb-2">
+                        <img
+                            src={formData.photoUrl}
+                            alt="Previsualización"
+                            className="w-full h-full object-cover rounded-full"
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, photoUrl: "" })}
+                            className="absolute top-0 right-0 bg-destructive text-white rounded-full p-1 w-6 h-6 flex items-center justify-center text-xs"
+                        >
+                            X
+                        </button>
+                    </div>
+                ) : (
+                    <div className="w-24 h-24 mb-2 rounded-full bg-muted flex items-center justify-center text-4xl text-muted-foreground">
+                        📷
+                    </div>
+                )}
+                <Label htmlFor="photo" className="cursor-pointer">
+                    <div className="flex items-center gap-2 text-sm text-primary hover:underline">
+                        {uploading ? "Subiendo..." : "Subir foto"}
+                    </div>
+                    <Input
+                        id="photo"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleImageUpload}
+                        disabled={uploading}
+                    />
+                </Label>
+            </div>
+
 
             <div className="space-y-2">
                 <Label htmlFor="name">Nombre *</Label>
@@ -326,7 +411,7 @@ function PetForm({
                 <Button type="button" variant="outline" className="flex-1" onClick={onCancel}>
                     Cancelar
                 </Button>
-                <Button type="submit" className="flex-1">
+                <Button type="submit" className="flex-1" disabled={uploading}>
                     {pet ? "Guardar cambios" : "Añadir mascota"}
                 </Button>
             </div>

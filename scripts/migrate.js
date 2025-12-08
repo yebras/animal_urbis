@@ -9,7 +9,7 @@ const client = new Client({
     password: 'Econocom2025?',
     port: 5432,
     ssl: {
-        rejectUnauthorized: false, // Required for Supabase in some environments
+        rejectUnauthorized: false,
     },
 });
 
@@ -19,13 +19,20 @@ async function runMigration() {
         await client.connect();
         console.log('Connected successfully!');
 
-        const sqlPath = path.join(__dirname, '..', 'supabase', 'migrations', '001_initial_schema.sql');
-        const sql = fs.readFileSync(sqlPath, 'utf8');
+        const migrationFiles = [
+            '001_initial_schema.sql',
+            '002_storage_and_fixes.sql'
+        ];
 
-        console.log('Running migration...');
-        await client.query(sql);
+        for (const file of migrationFiles) {
+            console.log(`Running migration: ${file}...`);
+            const sqlPath = path.join(__dirname, '..', 'supabase', 'migrations', file);
+            const sql = fs.readFileSync(sqlPath, 'utf8');
+            await client.query(sql);
+            console.log(`Migration ${file} completed!`);
+        }
 
-        console.log('Migration completed successfully!');
+        console.log('All migrations completed successfully!');
         process.exit(0);
     } catch (err) {
         console.error('Migration failed:', err);

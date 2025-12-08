@@ -13,7 +13,7 @@ const navItems = [
     { href: "/recursos-legales", label: "Recursos Legales", icon: "⚖️" },
     { href: "/mis-mascotas", label: "Mis Mascotas", icon: "🐾" },
     { href: "/foro", label: "Foro", icon: "💬" },
-    { href: "/enlaces", label: "Enlaces", icon: "🔗" },
+    { href: "/lugares-interes", label: "Lugares de interés", icon: "🗺️" },
 ];
 
 export function Navigation() {
