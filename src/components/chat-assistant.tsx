@@ -1,9 +1,13 @@
+
 "use client";
 
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { processChat } from "@/app/actions/chat";
+import { Paperclip, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface Message {
     id: string;
@@ -16,7 +20,7 @@ const initialMessages: Message[] = [
     {
         id: "1",
         role: "assistant",
-        content: "¡Guau guau! 🐕 ¡Hola! Soy Toby, tu asistente virtual perruno. Estoy aquí para ayudarte con cualquier duda sobre el cuidado de tus mascotas, legislación en España, consejos de salud y mucho más. ¿En qué puedo ayudarte hoy?",
+        content: "¡Guau guau! 🐕 ¡Hola! Soy Toby, tu asistente virtual perruno. Estoy alimentado por IA avanzada para leer documentos y buscar en internet. ¿En qué puedo ayudarte hoy?",
         timestamp: new Date(),
     },
 ];
@@ -28,36 +32,13 @@ const quickQuestions = [
     "Ley de Bienestar Animal",
 ];
 
-const knowledgeBase: Record<string, string> = {
-    // Health & Vets
-    "vacuna": "🐕 Las vacunas esenciales para tu perro en España son:\n• **Polivalente** (Parvovirus, Moquillo, Hepatitis...): 6-8 semanas y refuerzos.\n• **Rabia**: Obligatoria en casi toda España a partir de los 3 meses.\n• **Leishmaniosis**: Muy recomendable en zonas cálidas.\n\n¡Consulta siempre a tu veterinario!",
-    "desparasit": "🪱 Debes desparasitar internamente cada 3 meses y externamente (pipetas/collares) cada mes, especialmente en primavera y verano por las garrapatas y mosquitos.",
-    "comida": "🍖 Una buena dieta depende de la edad y raza. Evita siempre: chocolate, uvas, cebolla y ajo, que son tóxicos. ¿Buscas recomendaciones de pienso o dieta BARF?",
-    "toxico": "⚠️ Alimentos prohibidos: Chocolate, cafeína, uvas, pasas, alcohol, ajo, cebolla. Si ha ingerido algo sospechoso, ¡ve al veterinario inmediatamente!",
-
-    // Legal
-    "microchip": "🐱 El microchip es **obligatorio** para perros, gatos y hurones en toda España. Es la única forma de recuperar a tu animal si se pierde y evitar multas.",
-    "ley": "📜 La nueva **Ley de Bienestar Animal (2023)** establece:\n• Prohibición del sacrificio salvo eutanasia médica.\n• Curso obligatorio para tener perro (pendiente de reglamento).\n• Seguro de Responsabilidad Civil obligatorio.\n• Prohibición de dejar al perro solo más de 24h.",
-    "seguro": "🛡️ Es obligatorio contratar un Seguro de Responsabilidad Civil para todos los perros, independientemente de su raza.",
-    "perro peligroso": "🐕 Los PPP (Perros Potencialmente Peligrosos) requieren licencia, seguro específico y deben ir siempre con bozal y correa de menos de 2 metros en espacios públicos.",
-    "ppp": "🐕 Los PPP (Perros Potencialmente Peligrosos) requieren licencia, seguro específico y deben ir siempre con bozal y correa de menos de 2 metros en espacios públicos.",
-
-    // General
-    "viajar": "🚗 Para viajar por la UE necesitas el Pasaporte Europeo de Animales de Compañía. Para viajar en tren (Renfe), los perros de hasta 40kg pueden viajar con billete propio.",
-    "adoptar": "❤️ Adoptar es un acto de amor. Te recomiendo visitar protectoras locales. Necesitarás firmar un contrato de adopción y comprometerte a cuidarlo y no abandonarlo.",
-    "pasear": "🦮 Los perros necesitan al menos 3 paseos al día. Recuerda recoger siempre sus excrementos y llevar una botella de agua con vinagre para limpiar los orines.",
-
-    // Fun/Fallback
-    "toby": "¡Ese soy yo! Soy un Golden Retriever virtual programado para ayudarte. 🦴",
-    "hola": "¡Hola! ¿Qué tal estás tú y tu peludo amigo?",
-    "gracias": "¡De nada! Aquí estoy para lo que necesites. ¡Guau!",
-};
-
 export function ChatAssistant() {
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<Message[]>(initialMessages);
     const [input, setInput] = useState("");
     const [isTyping, setIsTyping] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
 
     // Scroll cleanup fix
@@ -87,26 +68,43 @@ export function ChatAssistant() {
         }
     }, [messages, isTyping]);
 
-    const getResponse = (query: string): string => {
-        const lowerQuery = query.toLowerCase();
-
-        // Check for keyword matches
-        for (const [key, response] of Object.entries(knowledgeBase)) {
-            if (lowerQuery.includes(key)) {
-                return response;
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            if (file.type === "application/pdf") {
+                setSelectedFile(file);
+                toast.success(`Archivo seleccionado: ${file.name}`);
+            } else {
+                toast.error("Solo se permiten archivos PDF");
+                e.target.value = "";
             }
         }
+    };
 
-        return "🤔 Mmm... No estoy seguro de eso, pero suena importante. Te recomiendo:\n\n• Consultar la sección de Recursos Legales de Animal Urbis.\n• Preguntar en nuestro Foro a la comunidad.\n• Si es una emergencia médica, ¡llama al veterinario!";
+    const convertFileToBase64 = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => {
+                if (typeof reader.result === "string") {
+                    // Remove data url prefix (e.g. "data:application/pdf;base64,")
+                    const base64 = reader.result.split(",")[1];
+                    resolve(base64);
+                } else {
+                    reject(new Error("Failed to convert file"));
+                }
+            };
+            reader.onerror = error => reject(error);
+        });
     };
 
     const sendMessage = async (content: string) => {
-        if (!content.trim()) return;
+        if (!content.trim() && !selectedFile) return;
 
         const userMessage: Message = {
             id: Date.now().toString(),
             role: "user",
-            content,
+            content: selectedFile ? `${content} \n[📎 Archivo adjunto: ${selectedFile.name}]` : content,
             timestamp: new Date(),
         };
 
@@ -114,20 +112,47 @@ export function ChatAssistant() {
         setInput("");
         setIsTyping(true);
 
-        // Simulated AI delay
-        setTimeout(() => {
-            const responseContent = getResponse(content);
+        const currentFile = selectedFile;
+        const currentFileName = selectedFile?.name;
+
+        // Clear file after sending
+        setSelectedFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+
+        try {
+            let fileBase64 = undefined;
+            if (currentFile) {
+                fileBase64 = await convertFileToBase64(currentFile);
+            }
+
+            // Convert messages to history format simply
+            const history = messages.map(m => ({ role: m.role, content: m.content }));
+
+            const responseText = await processChat(history, content, fileBase64, currentFileName);
 
             const assistantMessage: Message = {
                 id: (Date.now() + 1).toString(),
                 role: "assistant",
-                content: responseContent,
+                content: responseText,
                 timestamp: new Date(),
             };
 
             setMessages((prev) => [...prev, assistantMessage]);
+
+        } catch (error) {
+            console.error("Error sending message:", error);
+            toast.error("Hubo un error al procesar tu mensaje.");
+
+            const errorMessage: Message = {
+                id: (Date.now() + 1).toString(),
+                role: "assistant",
+                content: "Lo siento, tuve un problema técnico. ¿Podrías intentarlo de nuevo?",
+                timestamp: new Date(),
+            };
+            setMessages((prev) => [...prev, errorMessage]);
+        } finally {
             setIsTyping(false);
-        }, 1000); // Faster response for better UX
+        }
     };
 
     return (
@@ -157,7 +182,9 @@ export function ChatAssistant() {
                                 </Avatar>
                                 <div>
                                     <h3 className="font-semibold">Toby</h3>
-                                    <p className="text-xs text-primary-foreground/80">Tu asistente experto</p>
+                                    <p className="text-xs text-primary-foreground/80">
+                                        {isTyping ? "Pensando..." : "Tu asistente experto"}
+                                    </p>
                                 </div>
                             </div>
                             <button
@@ -190,12 +217,9 @@ export function ChatAssistant() {
 
                                 {isTyping && (
                                     <div className="flex justify-start">
-                                        <div className="bg-white dark:bg-slate-800 border rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
-                                            <div className="flex gap-1">
-                                                <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" />
-                                                <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce [animation-delay:0.1s]" />
-                                                <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce [animation-delay:0.2s]" />
-                                            </div>
+                                        <div className="bg-white dark:bg-slate-800 border rounded-2xl rounded-bl-md px-4 py-3 shadow-sm flex items-center gap-3">
+                                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                                            <span className="text-xs text-muted-foreground">Analizando...</span>
                                         </div>
                                     </div>
                                 )}
@@ -219,6 +243,25 @@ export function ChatAssistant() {
                             </div>
                         )}
 
+                        {/* File Selection Indicator */}
+                        {selectedFile && (
+                            <div className="px-4 py-2 bg-muted/50 border-t flex items-center justify-between text-xs text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                    <Paperclip className="h-3 w-3" />
+                                    {selectedFile.name}
+                                </span>
+                                <button
+                                    onClick={() => {
+                                        setSelectedFile(null);
+                                        if (fileInputRef.current) fileInputRef.current.value = "";
+                                    }}
+                                    className="hover:text-destructive"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        )}
+
                         {/* Input Area */}
                         <div className="p-4 border-t bg-background shrink-0">
                             <form
@@ -228,15 +271,33 @@ export function ChatAssistant() {
                                 }}
                                 className="flex gap-2"
                             >
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    className="hidden"
+                                    accept="application/pdf"
+                                    onChange={handleFileSelect}
+                                />
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={isTyping}
+                                    title="Adjuntar PDF"
+                                >
+                                    <Paperclip className="h-5 w-5 text-muted-foreground" />
+                                </Button>
+
                                 <Input
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
-                                    placeholder="Pregunta sobre leyes, salud..."
+                                    placeholder="Mensaje..."
                                     disabled={isTyping}
                                     className="flex-1"
                                     autoFocus
                                 />
-                                <Button type="submit" size="icon" disabled={isTyping || !input.trim()}>
+                                <Button type="submit" size="icon" disabled={isTyping || (!input.trim() && !selectedFile)}>
                                     ➤
                                 </Button>
                             </form>
