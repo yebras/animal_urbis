@@ -24,11 +24,14 @@ const defaultCenter = {
 // Libraries to load 
 const libraries: ("places")[] = ["places"];
 
-// Place types with icons
+// Place types with icons and search keywords
 const placeTypes = [
-    { id: "veterinary_care", label: "Veterinarios", icon: "🏥" },
-    { id: "pet_store", label: "Tiendas", icon: "🏪" },
-    { id: "park", label: "Parques", icon: "🌳" },
+    { id: "veterinary_care", label: "Veterinarios", icon: "🏥", keyword: "veterinario" },
+    { id: "pet_store", label: "Tiendas", icon: "🏪", keyword: "tienda de animales" },
+    { id: "park", label: "Parques", icon: "🌳", keyword: "parque perros" },
+    { id: "pet_grooming", label: "Peluquería", icon: "✂️", keyword: "peluquería canina" },
+    { id: "pet_boarding", label: "Guardería", icon: "🏨", keyword: "guardería mascotas" },
+    { id: "dog_walker", label: "Paseadores", icon: "🦮", keyword: "paseador perros" },
 ];
 
 export default function LugaresInteresPage() {
@@ -79,14 +82,17 @@ export default function LugaresInteresPage() {
         setMap(null);
     }, []);
 
-    const searchNearby = (location: google.maps.LatLngLiteral, type: string) => {
+    const searchNearby = (location: google.maps.LatLngLiteral, typeId: string) => {
         if (!map || !window.google) return;
+
+        const typeInfo = placeTypes.find(t => t.id === typeId);
+        const keyword = typeInfo?.keyword || "veterinario";
 
         const service = new window.google.maps.places.PlacesService(map);
         const request: google.maps.places.PlaceSearchRequest = {
             location: location,
             radius: 5000, // 5km radius
-            type: type,
+            keyword: keyword, // Using keyword instead of type for better results with service providers
         };
 
         service.nearbySearch(request, (results, status) => {
@@ -94,7 +100,8 @@ export default function LugaresInteresPage() {
                 setPlaces(results);
             } else {
                 setPlaces([]);
-                toast.info("No se encontraron lugares cercanos de este tipo");
+                // Do not toast error on initial load to avoid spam, only if user explicitly interacts? 
+                // Kept simple for now.
             }
         });
     };
@@ -107,7 +114,7 @@ export default function LugaresInteresPage() {
     }, [isLoaded, map, selectedType, center]);
 
     if (!isLoaded) {
-        return <div className="p-8 text-center">Cargando mapa...</div>;
+        return <div className="p-8 text-center animate-pulse">Cargando mapa...</div>;
     }
 
     return (
@@ -116,7 +123,7 @@ export default function LugaresInteresPage() {
                 <div>
                     <h1 className="text-3xl font-bold mb-2">🗺️ Lugares de Interés</h1>
                     <p className="text-muted-foreground">
-                        Encuentra veterinarios, tiendas y parques cerca de ti.
+                        Encuentra los mejores servicios cerca de ti.
                     </p>
                 </div>
                 <Button onClick={handleLocateMe} disabled={loadingLocation}>
@@ -152,7 +159,7 @@ export default function LugaresInteresPage() {
 
                     {/* Minimalist Place Details Card */}
                     {selectedPlace && (
-                        <Card className="animate-in fade-in slide-in-from-bottom-4">
+                        <Card className="animate-in fade-in slide-in-from-bottom-4 shadow-lg border-primary/20">
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-lg leading-tight">
                                     {selectedPlace.name}
@@ -166,7 +173,7 @@ export default function LugaresInteresPage() {
                                 </div>
                             </CardHeader>
                             <CardContent className="text-sm space-y-2">
-                                <p className="text-muted-foreground">
+                                <p className="text-muted-foreground line-clamp-2">
                                     {selectedPlace.vicinity}
                                 </p>
                                 {selectedPlace.opening_hours?.isOpen() ? (
@@ -175,11 +182,10 @@ export default function LugaresInteresPage() {
                                     </Badge>
                                 ) : (
                                     <Badge variant="outline" className="text-red-600 border-red-200 bg-red-50">
-                                        Cerrado
+                                        Cerrado (o sin horario)
                                     </Badge>
                                 )}
                                 <Button
-                                    variant="secondary"
                                     className="w-full mt-2"
                                     onClick={() => {
                                         window.open(
@@ -196,11 +202,11 @@ export default function LugaresInteresPage() {
                 </div>
 
                 <div className="lg:col-span-3">
-                    <Card className="overflow-hidden border-2">
+                    <Card className="overflow-hidden border-2 h-[600px] relative">
                         <GoogleMap
-                            mapContainerStyle={containerStyle}
+                            mapContainerStyle={{ width: "100%", height: "100%" }}
                             center={center}
-                            zoom={14}
+                            zoom={13}
                             onLoad={onLoad}
                             onUnmount={onUnmount}
                             options={{
@@ -219,9 +225,10 @@ export default function LugaresInteresPage() {
                             {/* User Location Marker */}
                             <Marker
                                 position={center}
+                                zIndex={999}
                                 icon={{
                                     path: window.google.maps.SymbolPath.CIRCLE,
-                                    scale: 8,
+                                    scale: 10,
                                     fillColor: "#4285F4",
                                     fillOpacity: 1,
                                     strokeColor: "white",
@@ -235,29 +242,13 @@ export default function LugaresInteresPage() {
                                     key={place.place_id}
                                     position={place.geometry?.location!}
                                     onClick={() => setSelectedPlace(place)}
-                                    animation={window.google.maps.Animation.DROP}
+                                    // Use specific icons based on type selection for clarity
                                     icon={{
-                                        url:
-                                            selectedType === "veterinary_care"
-                                                ? "http://maps.google.com/mapfiles/ms/icons/red-dot.png"
-                                                : selectedType === "park"
-                                                    ? "http://maps.google.com/mapfiles/ms/icons/green-dot.png"
-                                                    : "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+                                        url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png"
+                                        // Keeping it simple with red dots, but could differentiate if multiple types shown
                                     }}
                                 />
                             ))}
-
-                            {selectedPlace && (
-                                <InfoWindow
-                                    position={selectedPlace.geometry?.location!}
-                                    onCloseClick={() => setSelectedPlace(null)}
-                                >
-                                    <div className="p-1">
-                                        <h3 className="font-bold text-sm mb-1">{selectedPlace.name}</h3>
-                                        <p className="text-xs">{selectedPlace.vicinity}</p>
-                                    </div>
-                                </InfoWindow>
-                            )}
                         </GoogleMap>
                     </Card>
                 </div>

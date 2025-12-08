@@ -24,10 +24,35 @@ const initialMessages: Message[] = [
 
 const quickQuestions = [
     "¿Qué vacunas necesita mi perro?",
-    "¿Es obligatorio el microchip para gatos?",
-    "Consejos para adoptar una mascota",
-    "¿Cómo registro a mi mascota en Madrid?",
+    "¿Es obligatorio el microchip?",
+    "Consejos para adoptar",
+    "Ley de Bienestar Animal",
 ];
+
+const knowledgeBase: Record<string, string> = {
+    // Health & Vets
+    "vacuna": "🐕 Las vacunas esenciales para tu perro en España son:\n• **Polivalente** (Parvovirus, Moquillo, Hepatitis...): 6-8 semanas y refuerzos.\n• **Rabia**: Obligatoria en casi toda España a partir de los 3 meses.\n• **Leishmaniosis**: Muy recomendable en zonas cálidas.\n\n¡Consulta siempre a tu veterinario!",
+    "desparasit": "🪱 Debes desparasitar internamente cada 3 meses y externamente (pipetas/collares) cada mes, especialmente en primavera y verano por las garrapatas y mosquitos.",
+    "comida": "🍖 Una buena dieta depende de la edad y raza. Evita siempre: chocolate, uvas, cebolla y ajo, que son tóxicos. ¿Buscas recomendaciones de pienso o dieta BARF?",
+    "toxico": "⚠️ Alimentos prohibidos: Chocolate, cafeína, uvas, pasas, alcohol, ajo, cebolla. Si ha ingerido algo sospechoso, ¡ve al veterinario inmediatamente!",
+
+    // Legal
+    "microchip": "🐱 El microchip es **obligatorio** para perros, gatos y hurones en toda España. Es la única forma de recuperar a tu animal si se pierde y evitar multas.",
+    "ley": "📜 La nueva **Ley de Bienestar Animal (2023)** establece:\n• Prohibición del sacrificio salvo eutanasia médica.\n• Curso obligatorio para tener perro (pendiente de reglamento).\n• Seguro de Responsabilidad Civil obligatorio.\n• Prohibición de dejar al perro solo más de 24h.",
+    "seguro": "🛡️ Es obligatorio contratar un Seguro de Responsabilidad Civil para todos los perros, independientemente de su raza.",
+    "perro peligroso": "🐕 Los PPP (Perros Potencialmente Peligrosos) requieren licencia, seguro específico y deben ir siempre con bozal y correa de menos de 2 metros en espacios públicos.",
+    "ppp": "🐕 Los PPP (Perros Potencialmente Peligrosos) requieren licencia, seguro específico y deben ir siempre con bozal y correa de menos de 2 metros en espacios públicos.",
+
+    // General
+    "viajar": "🚗 Para viajar por la UE necesitas el Pasaporte Europeo de Animales de Compañía. Para viajar en tren (Renfe), los perros de hasta 40kg pueden viajar con billete propio.",
+    "adoptar": "❤️ Adoptar es un acto de amor. Te recomiendo visitar protectoras locales. Necesitarás firmar un contrato de adopción y comprometerte a cuidarlo y no abandonarlo.",
+    "pasear": "🦮 Los perros necesitan al menos 3 paseos al día. Recuerda recoger siempre sus excrementos y llevar una botella de agua con vinagre para limpiar los orines.",
+
+    // Fun/Fallback
+    "toby": "¡Ese soy yo! Soy un Golden Retriever virtual programado para ayudarte. 🦴",
+    "hola": "¡Hola! ¿Qué tal estás tú y tu peludo amigo?",
+    "gracias": "¡De nada! Aquí estoy para lo que necesites. ¡Guau!",
+};
 
 export function ChatAssistant() {
     const [isOpen, setIsOpen] = useState(false);
@@ -36,23 +61,45 @@ export function ChatAssistant() {
     const [isTyping, setIsTyping] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
 
+    // Scroll cleanup fix: Ensure overflow is ALWAYS auto when checking unmount or closed
+    useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = "hidden";
+            // Mobile safari fix
+            document.body.style.position = "fixed";
+            document.body.style.width = "100%";
+        } else {
+            document.body.style.overflow = "";
+            document.body.style.position = "";
+            document.body.style.width = "";
+        }
+
+        return () => {
+            document.body.style.overflow = "";
+            document.body.style.position = "";
+            document.body.style.width = "";
+        };
+    }, [isOpen]);
+
+    // Auto-scroll to bottom
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
-    }, [messages]);
+    }, [messages, isTyping]);
 
-    useEffect(() => {
-        // Scroll lock when chat is open
-        if (isOpen) {
-            document.body.style.overflow = "hidden";
-        } else {
-            document.body.style.overflow = "auto";
+    const getResponse = (query: string): string => {
+        const lowerQuery = query.toLowerCase();
+
+        // Check for keyword matches
+        for (const [key, response] of Object.entries(knowledgeBase)) {
+            if (lowerQuery.includes(key)) {
+                return response;
+            }
         }
-        return () => {
-            document.body.style.overflow = "auto";
-        };
-    }, [isOpen]);
+
+        return "🤔 Mmm... No estoy seguro de eso, pero suena importante. Te recomiendo:\n\n• Consultar la sección de Recursos Legales.\n• Preguntar en nuestro Foro.\n• Si es una emergencia médica, ¡llama al veterinario!";
+    };
 
     const sendMessage = async (content: string) => {
         if (!content.trim()) return;
@@ -68,27 +115,9 @@ export function ChatAssistant() {
         setInput("");
         setIsTyping(true);
 
-        // TODO: Connect to OpenAI API here
-        // Fallback response for now
+        // Simulated AI delay
         setTimeout(() => {
-            const responses: Record<string, string> = {
-                "vacunas": "🐕 Las vacunas esenciales para tu perro son:\n\n• **Parvovirus y Moquillo**: A las 6-8 semanas\n• **Hepatitis y Leptospirosis**: A las 8-10 semanas\n• **Rabia**: A partir de los 3 meses (obligatoria)\n\nRecuerda hacer refuerzos anuales. ¡Tu veterinario te ayudará con el calendario!",
-                "microchip": "🐱 Según la Ley 7/2023 de Bienestar Animal, el microchip es **obligatorio** para todos los gatos nacidos después del 29 de septiembre de 2023. Para gatos anteriores a esa fecha, tienes hasta septiembre de 2025 para identificarlos.\n\n¡Es un procedimiento rápido e indoloro!",
-                "adoptar": "❤️ ¡Qué bonito que quieras adoptar! Aquí algunos consejos:\n\n1. **Reflexiona**: ¿Tienes tiempo, espacio y recursos?\n2. **Visita protectoras**: Conoce a los animales en persona\n3. **Pregunta su historia**: Pueden tener necesidades especiales\n4. **Prepara tu hogar**: Camas, comederos, juguetes...\n5. **Paciencia**: La adaptación puede llevar semanas\n\n¡Adoptar salva vidas!",
-                "registro": "📋 Para registrar tu mascota en **Madrid**:\n\n1. Acude a un veterinario para el microchip\n2. El veterinario registrará en RIAC (Registro de Identificación de Animales de Compañía)\n3. Guarda el documento de identificación\n\nEl coste del microchip + registro suele ser 30-50€. ¡Es obligatorio!",
-                "default": "¡Interesante pregunta! 🐕 Aunque necesitaría más contexto para darte una respuesta completa, te recomiendo:\n\n• Consultar con un veterinario para temas de salud\n• Revisar la sección de Recursos Legales de MascotaZEN\n• Preguntar en nuestro Foro a la comunidad\n\n¿Hay algo más específico en lo que pueda ayudarte?",
-            };
-
-            let responseContent = responses.default;
-            const lowerContent = content.toLowerCase();
-
-            if (lowerContent.includes("vacuna")) responseContent = responses.vacunas;
-            else if (lowerContent.includes("microchip") || lowerContent.includes("chip"))
-                responseContent = responses.microchip;
-            else if (lowerContent.includes("adoptar") || lowerContent.includes("adopción"))
-                responseContent = responses.adoptar;
-            else if (lowerContent.includes("registro") || lowerContent.includes("registrar"))
-                responseContent = responses.registro;
+            const responseContent = getResponse(content);
 
             const assistantMessage: Message = {
                 id: (Date.now() + 1).toString(),
@@ -99,7 +128,7 @@ export function ChatAssistant() {
 
             setMessages((prev) => [...prev, assistantMessage]);
             setIsTyping(false);
-        }, 1500);
+        }, 1000); // Faster response for better UX
     };
 
     return (
@@ -113,96 +142,108 @@ export function ChatAssistant() {
             </button>
 
             {isOpen && (
-                <div className="fixed bottom-6 right-6 z-50 w-[380px] max-w-[calc(100vw-48px)] h-[600px] max-h-[calc(100vh-100px)] bg-background border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-300">
-                    <div className="bg-primary text-primary-foreground p-4 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10 bg-primary-foreground/20">
-                                <AvatarFallback className="text-xl">🐕</AvatarFallback>
-                            </Avatar>
-                            <div>
-                                <h3 className="font-semibold">Toby</h3>
-                                <p className="text-xs text-primary-foreground/80">Tu asistente mascotero</p>
-                            </div>
-                        </div>
-                        <button
-                            onClick={() => setIsOpen(false)}
-                            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary-foreground/20 transition-colors"
-                            aria-label="Cerrar chat"
-                        >
-                            ✕
-                        </button>
-                    </div>
+                <>
+                    {/* Backdrop for mobile focus */}
+                    <div
+                        className="fixed inset-0 bg-black/50 z-40 md:hidden"
+                        onClick={() => setIsOpen(false)}
+                    />
 
-                    <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-                        <div className="space-y-4">
-                            {messages.map((message) => (
-                                <div
-                                    key={message.id}
-                                    className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-                                >
-                                    <div
-                                        className={`max-w-[85%] rounded-2xl px-4 py-2 ${message.role === "user"
-                                                ? "bg-primary text-primary-foreground rounded-br-md"
-                                                : "bg-muted rounded-bl-md"
-                                            }`}
-                                    >
-                                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                                    </div>
+                    <div className="fixed bottom-0 right-0 md:bottom-6 md:right-6 z-50 w-full md:w-[380px] h-[80vh] md:h-[600px] bg-background border rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-300">
+                        {/* Header */}
+                        <div className="bg-primary text-primary-foreground p-4 flex items-center justify-between shrink-0">
+                            <div className="flex items-center gap-3">
+                                <Avatar className="h-10 w-10 bg-primary-foreground/20">
+                                    <AvatarFallback className="text-xl">🐕</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <h3 className="font-semibold">Toby</h3>
+                                    <p className="text-xs text-primary-foreground/80">Tu asistente experto</p>
                                 </div>
-                            ))}
+                            </div>
+                            <button
+                                onClick={() => setIsOpen(false)}
+                                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary-foreground/20 transition-colors"
+                                aria-label="Cerrar chat"
+                            >
+                                ✕
+                            </button>
+                        </div>
 
-                            {isTyping && (
-                                <div className="flex justify-start">
-                                    <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3">
-                                        <div className="flex gap-1">
-                                            <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" />
-                                            <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce [animation-delay:0.1s]" />
-                                            <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce [animation-delay:0.2s]" />
+                        {/* Messages Area */}
+                        <ScrollArea className="flex-1 p-4 bg-slate-50 dark:bg-slate-900/50" ref={scrollRef}>
+                            <div className="space-y-4">
+                                {messages.map((message) => (
+                                    <div
+                                        key={message.id}
+                                        className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                                    >
+                                        <div
+                                            className={`max-w-[85%] rounded-2xl px-4 py-2 shadow-sm ${message.role === "user"
+                                                ? "bg-primary text-primary-foreground rounded-br-md"
+                                                : "bg-white dark:bg-slate-800 border rounded-bl-md"
+                                                }`}
+                                        >
+                                            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                                         </div>
                                     </div>
-                                </div>
-                            )}
-                        </div>
-                    </ScrollArea>
-
-                    {messages.length === 1 && (
-                        <div className="px-4 pb-2">
-                            <p className="text-xs text-muted-foreground mb-2">Preguntas frecuentes:</p>
-                            <div className="flex flex-wrap gap-2">
-                                {quickQuestions.map((q) => (
-                                    <button
-                                        key={q}
-                                        onClick={() => sendMessage(q)}
-                                        className="text-xs bg-muted hover:bg-muted/80 px-3 py-1.5 rounded-full transition-colors"
-                                    >
-                                        {q}
-                                    </button>
                                 ))}
-                            </div>
-                        </div>
-                    )}
 
-                    <div className="p-4 border-t">
-                        <form
-                            onSubmit={(e) => {
-                                e.preventDefault();
-                                sendMessage(input);
-                            }}
-                            className="flex gap-2"
-                        >
-                            <Input
-                                value={input}
-                                onChange={(e) => setInput(e.target.value)}
-                                placeholder="Escribe tu pregunta..."
-                                disabled={isTyping}
-                                className="flex-1"
-                            />
-                            <Button type="submit" size="icon" disabled={isTyping || !input.trim()}>
-                                ➤
-                            </Button>
-                        </form>
+                                {isTyping && (
+                                    <div className="flex justify-start">
+                                        <div className="bg-white dark:bg-slate-800 border rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
+                                            <div className="flex gap-1">
+                                                <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" />
+                                                <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce [animation-delay:0.1s]" />
+                                                <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce [animation-delay:0.2s]" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </ScrollArea>
+
+                        {/* Quick Questions Chips */}
+                        {messages.length === 1 && (
+                            <div className="px-4 py-2 bg-slate-50 dark:bg-slate-900/50 shrink-0 overflow-x-auto">
+                                <div className="flex gap-2">
+                                    {quickQuestions.map((q) => (
+                                        <button
+                                            key={q}
+                                            onClick={() => sendMessage(q)}
+                                            className="text-xs bg-white dark:bg-slate-800 border hover:bg-slate-100 whitespace-nowrap px-3 py-1.5 rounded-full transition-colors"
+                                        >
+                                            {q}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Input Area */}
+                        <div className="p-4 border-t bg-background shrink-0">
+                            <form
+                                onSubmit={(e) => {
+                                    e.preventDefault();
+                                    sendMessage(input);
+                                }}
+                                className="flex gap-2"
+                            >
+                                <Input
+                                    value={input}
+                                    onChange={(e) => setInput(e.target.value)}
+                                    placeholder="Pregunta sobre leyes, salud..."
+                                    disabled={isTyping}
+                                    className="flex-1"
+                                    autoFocus
+                                />
+                                <Button type="submit" size="icon" disabled={isTyping || !input.trim()}>
+                                    ➤
+                                </Button>
+                            </form>
+                        </div>
                     </div>
-                </div>
+                </>
             )}
         </>
     );
