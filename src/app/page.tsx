@@ -34,10 +34,10 @@ const features = [
     href: "#asistente",
   },
   {
-    icon: "🔗",
-    title: "Enlaces de Interés",
-    description: "Veterinarios, peluquerías y más cerca de ti.",
-    href: "/enlaces",
+    icon: "🗺️",
+    title: "Lugares de Interés",
+    description: "Encuentra veterinarios, peluquerías y parques cerca.",
+    href: "/lugares-interes",
   },
 ];
 
@@ -59,20 +59,18 @@ export default function HomePage() {
             </h1>
 
             <p className="text-lg md:text-xl text-muted-foreground mb-8">
-              Todo lo que necesitas para cuidar de tus mascotas en España.
-              Noticias, recursos legales, comunidad y un asistente virtual
-              siempre dispuesto a ayudarte.
+              Animal Urbis te ofrece toda la información y herramientas que necesitas para el cuidado de tus mascotas en tu ciudad
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/registro">
                 <Button size="lg" className="w-full sm:w-auto">
-                  Comenzar Gratis
+                  Unirme
                 </Button>
               </Link>
-              <Link href="/noticias">
+              <Link href="/login">
                 <Button size="lg" variant="outline" className="w-full sm:w-auto">
-                  Ver Noticias
+                  Acceder
                 </Button>
               </Link>
             </div>
