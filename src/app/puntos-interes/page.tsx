@@ -1,14 +1,13 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useState, useCallback, useEffect } from "react";
+import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, AlertCircle } from "lucide-react";
 
 // --- SERVICE APPS DATA ---
 const serviceApps = [
@@ -74,10 +73,14 @@ export default function PuntosInteresPage() {
     const [map, setMap] = useState<google.maps.Map | null>(null);
     const [loadingLocation, setLoadingLocation] = useState(false);
 
-    const { isLoaded } = useJsApiLoader({
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+
+    const { isLoaded, loadError } = useJsApiLoader({
         id: "google-map-script",
-        googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+        googleMapsApiKey: apiKey || "",
         libraries: libraries,
+        // Prevent loading if no API key to avoid console errors/alerts
+        preventGoogleFontsLoading: !apiKey,
     });
 
     // Get current location
@@ -115,7 +118,8 @@ export default function PuntosInteresPage() {
     }, []);
 
     const searchNearby = (location: google.maps.LatLngLiteral, typeId: string) => {
-        if (!map || !window.google) return;
+        // Safety check for window.google
+        if (!map || typeof window === 'undefined' || !window.google || !window.google.maps) return;
 
         const typeInfo = placeTypes.find(t => t.id === typeId);
         const keyword = typeInfo?.keyword || "veterinario";
@@ -138,14 +142,10 @@ export default function PuntosInteresPage() {
 
     // Re-search when type changes or map loads
     useEffect(() => {
-        if (isLoaded && map) {
+        if (isLoaded && map && apiKey) {
             searchNearby(center, selectedType);
         }
-    }, [isLoaded, map, selectedType, center]);
-
-    if (!isLoaded) {
-        return <div className="p-8 text-center animate-pulse">Cargando mapa...</div>;
-    }
+    }, [isLoaded, map, selectedType, center, apiKey]);
 
     return (
         <div className="container mx-auto px-4 py-8">
@@ -165,7 +165,7 @@ export default function PuntosInteresPage() {
                         <div className="text-sm text-muted-foreground">
                             Buscando cerca del centro del mapa
                         </div>
-                        <Button onClick={handleLocateMe} disabled={loadingLocation} size="sm">
+                        <Button onClick={handleLocateMe} disabled={loadingLocation || !isLoaded} size="sm">
                             {loadingLocation ? "Localizando..." : "📍 Usar mi ubicación"}
                         </Button>
                     </div>
@@ -209,13 +209,16 @@ export default function PuntosInteresPage() {
                                         <p className="text-muted-foreground line-clamp-2">
                                             {selectedPlace.vicinity}
                                         </p>
-                                        {selectedPlace.opening_hours?.isOpen() ? (
-                                            <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 text-[10px]">
-                                                Abierto ahora
-                                            </Badge>
-                                        ) : (
-                                            <Badge variant="outline" className="text-red-600 border-red-200 bg-red-50 text-[10px]">
-                                                Cerrado
+                                        {selectedPlace.opening_hours?.isOpen && (
+                                            <Badge
+                                                variant="outline"
+                                                className={
+                                                    selectedPlace.opening_hours.isOpen()
+                                                        ? "text-green-600 border-green-200 bg-green-50 text-[10px]"
+                                                        : "text-red-600 border-red-200 bg-red-50 text-[10px]"
+                                                }
+                                            >
+                                                {selectedPlace.opening_hours.isOpen() ? "Abierto ahora" : "Cerrado"}
                                             </Badge>
                                         )}
                                         <Button
@@ -237,47 +240,67 @@ export default function PuntosInteresPage() {
                         {/* Map */}
                         <div className="lg:col-span-3 h-full">
                             <Card className="overflow-hidden border-2 h-full w-full relative">
-                                <GoogleMap
-                                    mapContainerStyle={containerStyle}
-                                    center={center}
-                                    zoom={14}
-                                    onLoad={onLoad}
-                                    onUnmount={onUnmount}
-                                    options={{
-                                        mapTypeControl: false,
-                                        streetViewControl: false,
-                                        fullscreenControl: false,
-                                        styles: [
-                                            {
-                                                featureType: "poi",
-                                                elementType: "labels",
-                                                stylers: [{ visibility: "off" }],
-                                            }
-                                        ]
-                                    }}
-                                >
-                                    {/* User Marker */}
-                                    <Marker
-                                        position={center}
-                                        zIndex={999}
-                                        icon={{
-                                            path: window.google.maps.SymbolPath.CIRCLE,
-                                            scale: 8,
-                                            fillColor: "#4285F4",
-                                            fillOpacity: 1,
-                                            strokeColor: "white",
-                                            strokeWeight: 2,
+                                {!apiKey ? (
+                                    <div className="w-full h-full flex flex-col items-center justify-center bg-muted/20 text-muted-foreground p-8 text-center">
+                                        <AlertCircle className="w-12 h-12 mb-4 opacity-50" />
+                                        <h3 className="text-lg font-semibold mb-2">Mapa no disponible</h3>
+                                        <p className="max-w-sm">
+                                            Se requiere una clave de API de Google Maps para visualizar el mapa interactivo.
+                                        </p>
+                                    </div>
+                                ) : loadError ? (
+                                    <div className="w-full h-full flex flex-col items-center justify-center bg-muted/20 text-red-500 p-8 text-center">
+                                        <AlertCircle className="w-12 h-12 mb-4" />
+                                        <h3 className="text-lg font-semibold mb-2">Error al cargar el mapa</h3>
+                                        <p>{loadError.message}</p>
+                                    </div>
+                                ) : !isLoaded ? (
+                                    <div className="w-full h-full flex items-center justify-center bg-muted/20 animate-pulse">
+                                        Cargando mapa...
+                                    </div>
+                                ) : (
+                                    <GoogleMap
+                                        mapContainerStyle={containerStyle}
+                                        center={center}
+                                        zoom={14}
+                                        onLoad={onLoad}
+                                        onUnmount={onUnmount}
+                                        options={{
+                                            mapTypeControl: false,
+                                            streetViewControl: false,
+                                            fullscreenControl: false,
+                                            styles: [
+                                                {
+                                                    featureType: "poi",
+                                                    elementType: "labels",
+                                                    stylers: [{ visibility: "off" }],
+                                                }
+                                            ]
                                         }}
-                                    />
-                                    {/* Place Markers */}
-                                    {places.map((place) => (
+                                    >
+                                        {/* User Marker */}
                                         <Marker
-                                            key={place.place_id}
-                                            position={place.geometry?.location!}
-                                            onClick={() => setSelectedPlace(place)}
+                                            position={center}
+                                            zIndex={999}
+                                            icon={{
+                                                path: typeof window !== 'undefined' && window.google ? window.google.maps.SymbolPath.CIRCLE : 0,
+                                                scale: 8,
+                                                fillColor: "#4285F4",
+                                                fillOpacity: 1,
+                                                strokeColor: "white",
+                                                strokeWeight: 2,
+                                            }}
                                         />
-                                    ))}
-                                </GoogleMap>
+                                        {/* Place Markers */}
+                                        {places.map((place) => (
+                                            <Marker
+                                                key={place.place_id}
+                                                position={place.geometry?.location!}
+                                                onClick={() => setSelectedPlace(place)}
+                                            />
+                                        ))}
+                                    </GoogleMap>
+                                )}
                             </Card>
                         </div>
                     </div>

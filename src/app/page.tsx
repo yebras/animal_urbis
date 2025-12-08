@@ -37,7 +37,7 @@ const features = [
     icon: "🗺️",
     title: "Puntos de Interés",
     description: "Encuentra veterinarios, peluquerías y parques cerca.",
-    href: "/lugares-interes",
+    href: "/puntos-interes",
   },
 ];
 
