@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface Message {
@@ -171,7 +170,7 @@ export function ChatAssistant() {
                         </div>
 
                         {/* Messages Area */}
-                        <ScrollArea className="flex-1 p-4 bg-slate-50 dark:bg-slate-900/50" ref={scrollRef}>
+                        <div className="flex-1 p-4 bg-slate-50 dark:bg-slate-900/50 overflow-y-auto" ref={scrollRef}>
                             <div className="space-y-4">
                                 {messages.map((message) => (
                                     <div
@@ -201,7 +200,7 @@ export function ChatAssistant() {
                                     </div>
                                 )}
                             </div>
-                        </ScrollArea>
+                        </div>
 
                         {/* Quick Questions Chips */}
                         {messages.length === 1 && (
